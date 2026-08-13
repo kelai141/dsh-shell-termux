@@ -39,5 +39,9 @@
     "@deepseek-ai/schemastery": "3.18.1",
     "@types/node": "^24.0.0",
     "typescript": "^5.5.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kelai141/dsh-shell-termux.git"
   }
 }
