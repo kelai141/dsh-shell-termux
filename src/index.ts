@@ -81,21 +81,9 @@ export interface ProbeResult {
  * layer and approval flow are unchanged consumers.
  */
 export class TermuxBashExecutor extends LocalBashExecutor {
-  static override Config: z<Config> = z.object({
-    bashPath: z.string(),
-    prefix: z.string(),
-    home: z.string(),
-    termuxVersion: z.string().default('0.118.3'),
-    extraPath: z.array(z.string()).default([]),
-    // Inherited knobs, defaults mirroring LocalBashExecutor.Config.
-    cwd: z.string(),
-    timeoutMs: z.number().default(120_000),
-    maxTimeoutMs: z.number().default(600_000),
-    maxOutputBytes: z.number().default(64_000),
-    maxSpillBytes: z.number().default(64 * 1024 * 1024),
-    graceMs: z.number().default(3_000),
-  })
-
+  // No own Config: the inherited knobs' schema (with defaults) is inherited
+  // verbatim — schemastery preserves unknown keys (verified), so the Termux
+  // coordinates arrive in the raw config and are validated in the constructor.
   private readonly bashPath: string
   private readonly prefix: string
   private readonly home: string
@@ -113,8 +101,8 @@ export class TermuxBashExecutor extends LocalBashExecutor {
     this.bashPath = entry.bashPath
     this.prefix = entry.prefix
     this.home = entry.home
-    this.termuxVersion = entry.termuxVersion
-    this.extraPath = entry.extraPath
+    this.termuxVersion = entry.termuxVersion ?? '0.118.3'
+    this.extraPath = entry.extraPath ?? []
   }
 
   /**
