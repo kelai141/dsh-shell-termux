@@ -1,6 +1,6 @@
 # dsh-shell-termux
 
-> **dsh-mobile 生态** · [dsh-mobile-apk](https://github.com/kelai141/dsh-mobile-apk)（壳 APK）· [dsh-client-ui-responsive](https://github.com/kelai141/dsh-client-ui-responsive)（移动 UI）· [dsh-host-web-compat](https://github.com/kelai141/dsh-host-web-compat)（浏览器兼容）· [dsh-mobile](https://github.com/kelai141/dsh-mobile)（协调仓库，private）
+> **DeepSeek Harness × Android 生态** · [dsh-mobile-apk](https://github.com/kelai141/dsh-mobile-apk)（壳 APK）· [dsh-client-ui-responsive](https://github.com/kelai141/dsh-client-ui-responsive)（移动 UI）· [dsh-host-web-compat](https://github.com/kelai141/dsh-host-web-compat)（浏览器兼容）
 
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的安卓 bash 能力提供者，注册为 `ctx.shell`，让模型的 `bash` 工具在受控的 Termux 环境中执行——不做假沙箱，不依赖外部环境碰巧正确。
 
