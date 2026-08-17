@@ -1,7 +1,7 @@
 {
   "name": "@dsh-android/dsh-shell-termux",
   "description": "Android/Termux service provider for the bash capability seam: explicit Termux environment injection, probe diagnostics, honest app-domain sandbox declaration",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
