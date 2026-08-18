@@ -1,5 +1,7 @@
 # dsh-shell-termux
 
+[🌐 中文说明 / 中文 README](README.zh.md)
+
 > **DeepSeek Harness × Android 生态** · [dsh-mobile-apk](https://github.com/kelai141/dsh-mobile-apk)（壳 APK）· [dsh-client-ui-responsive](https://github.com/kelai141/dsh-client-ui-responsive)（移动 UI）· [dsh-host-web-compat](https://github.com/kelai141/dsh-host-web-compat)（浏览器兼容）
 
 Android/Termux bash capability provider for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
