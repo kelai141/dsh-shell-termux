@@ -207,7 +207,7 @@ export class TermuxBashExecutor extends LocalBashExecutor {
       }
     }
     if (missing.has('bash')) {
-      return { status: 'unusable', bash: this.bashPath, missing: [...REQUIRED_TOOLCHAIN] }
+      return { status: 'unusable', bash: this.bashPath, missing: [...REQUIRED_TOOLCHAIN], writeMode: this.writeMode }
     }
     const bashVersion = await this.readBashVersion()
     // Map toolchain packages to their probed representative binary.
