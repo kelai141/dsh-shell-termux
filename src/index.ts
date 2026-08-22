@@ -28,9 +28,6 @@ import type { SandboxMode } from '@deepseek-ai/dsh-sandbox'
 import { LocalBashExecutor } from '@deepseek-ai/dsh-bash-local'
 import type { Config as LocalConfig } from '@deepseek-ai/dsh-bash-local'
 
-/** The declared sandbox mode this executor applies by default. */
-const DECLARED_MODE: SandboxMode = 'workspace-write'
-
 /** Default grace period passed to probe spawns. */
 const PROBE_GRACE_MS = 3_000
 
@@ -57,11 +54,21 @@ export interface Config extends LocalConfig {
   termuxVersion?: string
   /** Extra PATH entries prepended to the injected PATH (e.g. /system/bin). */
   extraPath?: string[]
+  /**
+   * 写面档位（PRD F1.4/F1.8/D21）：workspace-write（默认，仅工作区与共享目录白名单）|
+   * danger-full-access（完全访问档位，开放共享存储全域，仍限应用域沙盒）|
+   * read-only（只读档位）。与 dsh-sandbox 的档位契约一一对应。
+   */
+  writeMode?: SandboxMode
+  /** 模型工作区根：写面白名单基准（与宿主文件工具共享同一份配置）。 */
+  workspaceRoot?: string
+  /** 用户经存储访问框架选定的共享目录（写面白名单，全局单一实例）。 */
+  sharedDirs?: string[]
 }
 
 /** The shape after schemastery applied the defaults (optional fields keep their undefined). */
-type ResolvedConfig = Required<Omit<Config, 'cwd' | 'termuxVersion' | 'extraPath'>> &
-  Pick<Config, 'cwd' | 'termuxVersion' | 'extraPath'>
+type ResolvedConfig = Required<Omit<Config, 'cwd' | 'termuxVersion' | 'extraPath' | 'writeMode' | 'workspaceRoot' | 'sharedDirs'>> &
+  Pick<Config, 'cwd' | 'termuxVersion' | 'extraPath' | 'writeMode' | 'workspaceRoot' | 'sharedDirs'>
 
 /** Result of the environment probe, for diagnostics/UI panels. */
 export interface ProbeResult {
@@ -73,6 +80,8 @@ export interface ProbeResult {
   bashVersion?: string
   /** Missing toolchain package names (pkg install hints). */
   missing: string[]
+  /** 写面档位（PRD F1.4）：探测结果附带当前档位，供工具链状态/缺包提示/写面状态面板消费。 */
+  writeMode?: SandboxMode
 }
 
 /**
@@ -89,6 +98,9 @@ export class TermuxBashExecutor extends LocalBashExecutor {
   private readonly home: string
   private readonly termuxVersion: string
   private readonly extraPath: readonly string[]
+  private readonly writeMode: SandboxMode
+  private readonly workspaceRoot?: string
+  private readonly sharedDirs: readonly string[]
 
   constructor(ctx: Context, config: Config) {
     super(ctx, config)
@@ -103,20 +115,33 @@ export class TermuxBashExecutor extends LocalBashExecutor {
     this.home = entry.home
     this.termuxVersion = entry.termuxVersion ?? '0.118.3'
     this.extraPath = entry.extraPath ?? []
+    const mode = entry.writeMode ?? 'workspace-write'
+    if (!['workspace-write', 'danger-full-access', 'read-only'].includes(mode)) {
+      throw new Error(`shell-termux: invalid writeMode '${String(mode)}' (workspace-write | danger-full-access | read-only)`)
+    }
+    this.writeMode = mode
+    this.workspaceRoot = entry.workspaceRoot
+    this.sharedDirs = entry.sharedDirs ?? []
   }
 
   /**
    * The declared default mode — the capability fact the tool layer and
    * permission presets read. Enforcement is the Android app domain, not a
    * path-level confiner; per-process facts report that honestly.
+   * v2 (PRD F1.4/D21): the mode is configurable (workspace-write default ✓,
+   * danger-full-access under the full-access tier, read-only for the read-only tier).
    */
   override get sandboxMode(): SandboxMode {
-    return DECLARED_MODE
+    return this.writeMode
   }
 
   /**
    * Self-contained Termux environment, merged under the caller's own env so a
    * trusted caller may still override (same philosophy as ENV_OVERRIDES).
+   * v2 additionally stamps the write-fence facts (PRD F1.4): the write mode,
+   * the workspace root and the shared-dir whitelist — the same single-instance
+   * config that the host file tools fence against. Child processes advertise
+   * the fence instead of silently assuming unlimited writes.
    */
   private termuxEnv(): Record<string, string> {
     return {
@@ -126,6 +151,9 @@ export class TermuxBashExecutor extends LocalBashExecutor {
       PREFIX: this.prefix,
       TERMUX_VERSION: this.termuxVersion,
       SHELL: this.bashPath,
+      DSH_WRITE_MODE: this.writeMode,
+      ...this.workspaceRoot ? { DSH_WORKSPACE: this.workspaceRoot } : {},
+      DSH_SHARED_DIRS: this.sharedDirs.join(':'),
     }
   }
 
@@ -153,14 +181,14 @@ export class TermuxBashExecutor extends LocalBashExecutor {
   override async run(spec: ShellExecSpec): Promise<ShellRunResult> {
     this.assertBash()
     const result = await this.runArgv(spec, this.bashArgv(spec.command))
-    return { ...result, sandbox: { mode: DECLARED_MODE, denied: false, enforcement: 'partial' } }
+    return { ...result, sandbox: { mode: this.writeMode, denied: false, enforcement: 'partial' } }
   }
 
   override start(spec: ShellExecSpec): ShellProcess {
     this.assertBash()
     const proc = this.startArgv(spec, this.bashArgv(spec.command))
     // Background processes never confine; the app-domain fact is fixed at spawn.
-    proc.sandbox = { mode: DECLARED_MODE, denied: false, enforcement: 'partial' }
+    proc.sandbox = { mode: this.writeMode, denied: false, enforcement: 'partial' }
     return proc
   }
 
@@ -193,6 +221,7 @@ export class TermuxBashExecutor extends LocalBashExecutor {
       bash: this.bashPath,
       ...bashVersion !== undefined ? { bashVersion } : {},
       missing: missingPkgs,
+      writeMode: this.writeMode,
     }
   }
 
