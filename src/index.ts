@@ -157,9 +157,19 @@ export class TermuxBashExecutor extends LocalBashExecutor {
     }
   }
 
+  /**
+   * 栅栏键（2026-08-23，审核 M6 修复）：写面事实由调用方 request.env 覆盖会
+   * 让子进程"以为"处于另一个档位（应用域栅栏不会被真提权，但下游信赖该 env
+   * 就会误导）。termuxEnv 产出的这三个键在 resolve 时拒绝被 request.env 覆盖。
+   */
+  private static readonly FENCE_KEYS = ['DSH_WRITE_MODE', 'DSH_WORKSPACE', 'DSH_SHARED_DIRS'] as const
+
   /** Stamp the controlled Termux environment onto every request. */
   override resolve(request: ShellExecRequest): ShellExecSpec {
-    return super.resolve({ ...request, env: { ...this.termuxEnv(), ...request.env } })
+    const fence = this.termuxEnv()
+    const user = { ...request.env }
+    for (const k of TermuxBashExecutor.FENCE_KEYS) delete user[k]
+    return super.resolve({ ...request, env: { ...fence, ...user } })
   }
 
   /** Reject with repair guidance when the configured bash is not executable. */
