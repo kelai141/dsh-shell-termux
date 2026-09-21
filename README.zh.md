@@ -18,7 +18,7 @@
 
 ```sh
 # 在 profile 目录（~/.dsh/profiles/web）下
-npm install /path/to/dsh-shell-termux-0.1.0.tgz
+npm install /path/to/dsh-shell-termux-0.2.0.tgz
 # 或手动：解压到 <profile>/node_modules/@dsh-android/dsh-shell-termux/
 ```
 
@@ -58,6 +58,7 @@ npm install /path/to/dsh-shell-termux-0.1.0.tgz
 - **复用本地机制**：继承 `LocalBashExecutor`（`runArgv`/`startArgv`）：进程组 SIGTERM→SIGKILL、输出上限+spill、宽限期、后台生命周期、teardown 归属；
 - **诚实沙箱声明**：`sandboxMode = 'workspace-write'`（permission presets 可挂载）+ 每次执行 `enforcement: 'partial'`：保护边界 = Android 应用域（SELinux u0_aXXX）+ 审批流；
 - **探测诊断**：`probe()` 报告 bash 存在/版本与缺失工具链（`pkg install bash coreutils findutils grep ripgrep` 提示）；配置错误时大声失败并给修复指引。
+- **工具链单一表（0.2.0）**：`REQUIRED_TOOLCHAIN` / `PROBE_BINARIES` / `TOOLCHAIN_REPRESENTATIVE` 只从一处导出，探测、安装提示与消费方清单不会各自漂移；源码级测试会拒绝第二份表。
 
 ## 验证
 

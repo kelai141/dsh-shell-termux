@@ -24,7 +24,7 @@ semantics (`workspace-write` + `enforcement: 'partial'`).
 
 ```sh
 # from the profile directory (~/.dsh/profiles/web)
-npm install /path/to/dsh-shell-termux-0.1.0.tgz
+npm install /path/to/dsh-shell-termux-0.2.0.tgz
 # or manually: unpack into <profile>/node_modules/@dsh-android/dsh-shell-termux/
 ```
 
@@ -70,6 +70,9 @@ npm install /path/to/dsh-shell-termux-0.1.0.tgz
 - **Probe diagnostics** — `probe()` reports bash presence/version and missing toolchain packages
   (`pkg install bash coreutils findutils grep ripgrep` hints). Misconfigured bash fails loud with
   repair guidance.
+- **Single toolchain table** (0.2.0) — `REQUIRED_TOOLCHAIN` / `PROBE_BINARIES` /
+  `TOOLCHAIN_REPRESENTATIVE` are exported from one module, so the probe, install hints and any
+  consumer list cannot drift apart; a source-level test fails if a second copy of the table exists.
 
 ## Verification
 
