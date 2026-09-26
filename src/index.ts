@@ -22,7 +22,7 @@
 import { accessSync, constants } from 'node:fs'
 import { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
-import type { ShellExecRequest, ShellExecSpec, ShellProcess, ShellRunResult } from '@deepseek-ai/dsh-shell'
+import type { ShellExecRequest, ShellExecSpec, ShellExecution, ShellRunResult } from '@deepseek-ai/dsh-shell'
 import type { SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess'
 import type { SandboxMode } from '@deepseek-ai/dsh-sandbox'
 import { LocalBashExecutor } from '@deepseek-ai/dsh-bash-local'
@@ -201,18 +201,34 @@ export class TermuxBashExecutor extends LocalBashExecutor {
     return [this.bashPath, '-c', command]
   }
 
-  override async run(spec: ShellExecSpec): Promise<ShellRunResult> {
-    this.assertBash()
-    const result = await this.runArgv(spec, this.bashArgv(spec.command))
-    return { ...result, sandbox: { mode: this.writeMode, denied: false, enforcement: 'partial' } }
+  /**
+   * Stamp the Android app-domain fact onto one execution — on the handle (so a
+   * background consumer reads it before the process settles) and on the result
+   * projection (foreground consumers). The handle is mutated in place, never
+   * rebuilt: 0.1.7's `ShellExecution` carries spawn state on the instance, so a
+   * spread copy would hand back a handle whose `done`/read path is detached.
+   */
+  private declareSandbox(execution: ShellExecution): ShellExecution {
+    const facts = { mode: this.writeMode, denied: false, enforcement: 'partial' } as const
+    const base = execution.result.bind(execution)
+    let decorated: Promise<ShellRunResult> | undefined
+    execution.sandbox = facts
+    execution.result = () => {
+      decorated ??= base().then((result) => ({ ...result, sandbox: facts }))
+      return decorated
+    }
+    return execution
   }
 
-  override start(spec: ShellExecSpec): ShellProcess {
+  /**
+   * 0.1.7 renamed the executor pair `run`/`start` to a single `execute` that
+   * returns a handle with a lazy `result()`; argv substitution now goes through
+   * the protected `executeArgv` (same slot upstream's sandbox executor confines
+   * through). Background consumers take the handle and skip `result()`.
+   */
+  override async execute(spec: ShellExecSpec): Promise<ShellExecution> {
     this.assertBash()
-    const proc = this.startArgv(spec, this.bashArgv(spec.command))
-    // Background processes never confine; the app-domain fact is fixed at spawn.
-    proc.sandbox = { mode: this.writeMode, denied: false, enforcement: 'partial' }
-    return proc
+    return this.declareSandbox(await this.executeArgv(spec, this.bashArgv(spec.command)))
   }
 
   /**
